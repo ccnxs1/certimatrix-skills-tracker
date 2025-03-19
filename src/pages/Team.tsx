@@ -26,12 +26,16 @@ import {
 } from '@/components/ui/select';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
+import { AddTeamMemberDialog } from '@/components/team/AddTeamMemberDialog';
 import { users } from '@/lib/data';
+import { User as UserType } from '@/lib/types';
+import { toast } from 'sonner';
 
 const Team = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [departmentFilter, setDepartmentFilter] = useState('all');
   const [isLoaded, setIsLoaded] = useState(false);
+  const [teamMembers, setTeamMembers] = useState<UserType[]>(users);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -42,11 +46,11 @@ const Team = () => {
 
   // Get unique departments
   const departments = Array.from(
-    new Set(users.map(user => user.department || 'Uncategorized'))
+    new Set(teamMembers.map(user => user.department || 'Uncategorized'))
   );
 
   // Filter team members
-  const filteredUsers = users.filter(user => {
+  const filteredUsers = teamMembers.filter(user => {
     const matchesSearch = 
       user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -62,7 +66,7 @@ const Team = () => {
 
   // Get the unique skills for a user
   const getUserSkills = (userId: string) => {
-    const userCertificates = users.find(u => u.id === userId)?.certificates || [];
+    const userCertificates = teamMembers.find(u => u.id === userId)?.certificates || [];
     const skills = new Set<string>();
     
     userCertificates.forEach(cert => {
@@ -74,12 +78,26 @@ const Team = () => {
 
   // Calculate certification progress (based on the number of certificates relative to the team)
   const getProgressPercentage = (userId: string) => {
-    const userCertCount = users.find(u => u.id === userId)?.certificates.length || 0;
-    const maxCertCount = Math.max(...users.map(u => u.certificates.length));
+    const userCertCount = teamMembers.find(u => u.id === userId)?.certificates.length || 0;
+    const maxCertCount = Math.max(...teamMembers.map(u => u.certificates.length));
     
     return maxCertCount > 0 
       ? Math.round((userCertCount / maxCertCount) * 100) 
       : 0;
+  };
+  
+  // Handle adding a new team member
+  const handleAddTeamMember = (newMember: Omit<UserType, "id" | "certificates" | "avatar">) => {
+    const newTeamMember: UserType = {
+      id: `user-${Date.now()}`,
+      name: newMember.name,
+      email: newMember.email,
+      role: newMember.role,
+      department: newMember.department,
+      certificates: [],
+    };
+    
+    setTeamMembers(prev => [...prev, newTeamMember]);
   };
 
   return (
@@ -96,10 +114,10 @@ const Team = () => {
             </div>
             
             <div className="flex space-x-2 mt-4 md:mt-0">
-              <Button size="sm">
-                <Plus className="h-4 w-4 mr-2" />
-                Add Team Member
-              </Button>
+              <AddTeamMemberDialog 
+                departments={departments}
+                onAddTeamMember={handleAddTeamMember}
+              />
             </div>
           </div>
           

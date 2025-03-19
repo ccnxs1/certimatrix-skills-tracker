@@ -7,6 +7,12 @@ import { toast } from "sonner";
  */
 export const exportCertificates = (certificates: Certificate[]) => {
   try {
+    // Validate data before export
+    if (!Array.isArray(certificates) || certificates.length === 0) {
+      toast.error("No certificates to export");
+      return;
+    }
+
     // Convert certificates to JSON string
     const certificatesJson = JSON.stringify(certificates, null, 2);
     
@@ -29,7 +35,7 @@ export const exportCertificates = (certificates: Certificate[]) => {
     // Clean up the URL
     URL.revokeObjectURL(url);
     
-    toast.success("Certificates exported successfully");
+    toast.success(`${certificates.length} certificates exported successfully`);
   } catch (error) {
     console.error("Error exporting certificates:", error);
     toast.error("Failed to export certificates");
@@ -42,53 +48,68 @@ export const exportCertificates = (certificates: Certificate[]) => {
 export const importCertificates = (
   onCertificatesImported: (certificates: Certificate[]) => void
 ) => {
-  try {
-    // Create a file input
-    const input = document.createElement("input");
-    input.type = "file";
-    input.accept = "application/json";
+  // Create a file input
+  const input = document.createElement("input");
+  input.type = "file";
+  input.accept = "application/json";
+  
+  // Add event listener for when a file is selected
+  input.onchange = (event) => {
+    const file = (event.target as HTMLInputElement).files?.[0];
+    if (!file) {
+      toast.error("No file selected");
+      return;
+    }
     
-    // Add event listener for when a file is selected
-    input.onchange = (event) => {
-      const file = (event.target as HTMLInputElement).files?.[0];
-      if (!file) return;
-      
-      const reader = new FileReader();
-      
-      // Event handler for when file is read
-      reader.onload = (e) => {
-        try {
-          const content = e.target?.result as string;
-          const importedCertificates = JSON.parse(content) as Certificate[];
-          
-          // Validate that the imported data is an array of certificates
-          if (!Array.isArray(importedCertificates)) {
-            throw new Error("Invalid format: expected an array of certificates");
-          }
-          
-          // Basic validation of each certificate
-          importedCertificates.forEach(cert => {
-            if (!cert.id || !cert.name || !cert.provider || !cert.userId) {
-              throw new Error("Invalid certificate data: missing required fields");
-            }
-          });
-          
-          // Pass the imported certificates to the callback
-          onCertificatesImported(importedCertificates);
-          toast.success(`Imported ${importedCertificates.length} certificates`);
-        } catch (error) {
-          console.error("Error parsing imported file:", error);
-          toast.error("Failed to import certificates: Invalid file format");
+    const reader = new FileReader();
+    
+    // Event handler for when file is read
+    reader.onload = (e) => {
+      try {
+        const content = e.target?.result as string;
+        const importedCertificates = JSON.parse(content) as Certificate[];
+        
+        // Validate that the imported data is an array of certificates
+        if (!Array.isArray(importedCertificates)) {
+          throw new Error("Invalid format: expected an array of certificates");
         }
-      };
-      
-      reader.readAsText(file);
+        
+        if (importedCertificates.length === 0) {
+          toast.warning("The imported file contains no certificates");
+          return;
+        }
+        
+        // Basic validation of each certificate
+        const validCertificates = importedCertificates.filter(cert => {
+          return cert.id && cert.name && cert.provider && cert.userId;
+        });
+        
+        if (validCertificates.length < importedCertificates.length) {
+          toast.warning(`${importedCertificates.length - validCertificates.length} certificates were invalid and skipped`);
+        }
+        
+        if (validCertificates.length === 0) {
+          toast.error("No valid certificates found in the imported file");
+          return;
+        }
+        
+        // Pass the imported certificates to the callback
+        onCertificatesImported(validCertificates);
+        toast.success(`Imported ${validCertificates.length} certificates successfully`);
+      } catch (error) {
+        console.error("Error parsing imported file:", error);
+        toast.error("Failed to import certificates: Invalid file format");
+      }
     };
     
-    // Trigger the file dialog
-    input.click();
-  } catch (error) {
-    console.error("Error importing certificates:", error);
-    toast.error("Failed to import certificates");
-  }
+    // Handle file read errors
+    reader.onerror = () => {
+      toast.error("Error reading the file");
+    };
+    
+    reader.readAsText(file);
+  };
+  
+  // Trigger the file dialog
+  input.click();
 };
