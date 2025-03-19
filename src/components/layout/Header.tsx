@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Menu, X, Award, Users, BarChart, FileCheck, Bell, LogOut } from 'lucide-react';
@@ -19,6 +18,12 @@ const Header = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { toast } = useToast();
+
+  // Track authentication state
+  const [isAuthenticated, setIsAuthenticated] = useState(() => {
+    // Check if user is authenticated by looking for a token in localStorage
+    return localStorage.getItem('auth_token') !== null;
+  });
 
   useEffect(() => {
     const handleScroll = () => {
@@ -47,7 +52,14 @@ const Header = () => {
   };
 
   const handleSignOut = () => {
-    // In a real implementation, this would handle authentication logout
+    // Clear authentication data from localStorage
+    localStorage.removeItem('auth_token');
+    localStorage.removeItem('user_data');
+    
+    // Update authentication state
+    setIsAuthenticated(false);
+    
+    // Show success toast
     toast({
       title: "Signed out successfully",
       description: "You have been signed out of your account",
