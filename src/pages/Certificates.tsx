@@ -27,8 +27,11 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
-import { certificates, users } from '@/lib/data';
+import { certificates as initialCertificates, users } from '@/lib/data';
 import { cn } from '@/lib/utils';
+import { Certificate } from '@/lib/types';
+import { AddCertificateDialog } from '@/components/certificates/AddCertificateDialog';
+import { exportCertificates, importCertificates } from '@/utils/certificateUtils';
 
 const getLevelColor = (level: string) => {
   switch (level) {
@@ -64,6 +67,7 @@ const Certificates = () => {
   const [filterProvider, setFilterProvider] = useState('all');
   const [filterLevel, setFilterLevel] = useState('all');
   const [isLoaded, setIsLoaded] = useState(false);
+  const [certificates, setCertificates] = useState<Certificate[]>(initialCertificates);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -86,6 +90,25 @@ const Certificates = () => {
     return matchesSearch && matchesProvider && matchesLevel;
   });
 
+  // Handler for adding a new certificate
+  const handleAddCertificate = (newCertificate: Certificate) => {
+    setCertificates(prev => [...prev, newCertificate]);
+  };
+
+  // Handler for importing certificates
+  const handleImportCertificates = (importedCertificates: Certificate[]) => {
+    setCertificates(prev => {
+      // Create a Set of existing certificate IDs for fast lookup
+      const existingIds = new Set(prev.map(cert => cert.id));
+      
+      // Filter out certificates that already exist by ID
+      const newCertificates = importedCertificates.filter(cert => !existingIds.has(cert.id));
+      
+      // Return the combined array
+      return [...prev, ...newCertificates];
+    });
+  };
+
   return (
     <div className="flex flex-col min-h-screen">
       <Header />
@@ -100,18 +123,23 @@ const Certificates = () => {
             </div>
             
             <div className="flex space-x-2 mt-4 md:mt-0">
-              <Button variant="outline" size="sm">
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => importCertificates(handleImportCertificates)}
+              >
                 <Upload className="h-4 w-4 mr-2" />
                 Import
               </Button>
-              <Button variant="outline" size="sm">
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => exportCertificates(certificates)}
+              >
                 <Download className="h-4 w-4 mr-2" />
                 Export
               </Button>
-              <Button size="sm">
-                <Plus className="h-4 w-4 mr-2" />
-                Add Certificate
-              </Button>
+              <AddCertificateDialog onAddCertificate={handleAddCertificate} />
             </div>
           </div>
           
