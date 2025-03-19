@@ -1,20 +1,24 @@
 
 import { useState, useEffect } from 'react';
-import { Link, useLocation } from 'react-router-dom';
-import { Menu, X, Award, Users, BarChart, FileCheck, Bell } from 'lucide-react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Menu, X, Award, Users, BarChart, FileCheck, Bell, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { 
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuTrigger 
+  DropdownMenuTrigger, 
+  DropdownMenuSeparator
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
+import { useToast } from "@/hooks/use-toast";
 
 const Header = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
+  const { toast } = useToast();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -40,6 +44,17 @@ const Header = () => {
 
   const isActive = (path: string) => {
     return location.pathname === path;
+  };
+
+  const handleSignOut = () => {
+    // In a real implementation, this would handle authentication logout
+    toast({
+      title: "Signed out successfully",
+      description: "You have been signed out of your account",
+    });
+    
+    // Redirect to home page after sign out
+    navigate('/');
   };
 
   return (
@@ -99,7 +114,14 @@ const Header = () => {
               <DropdownMenuContent align="end" className="w-48 animate-fade-in">
                 <DropdownMenuItem className="cursor-pointer">Profile</DropdownMenuItem>
                 <DropdownMenuItem className="cursor-pointer">Settings</DropdownMenuItem>
-                <DropdownMenuItem className="cursor-pointer text-destructive">Sign out</DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem 
+                  className="cursor-pointer text-destructive flex items-center gap-2"
+                  onClick={handleSignOut}
+                >
+                  <LogOut className="h-4 w-4" />
+                  Sign out
+                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
@@ -161,6 +183,15 @@ const Header = () => {
                   <span className="text-xs text-muted-foreground">alex.morgan@example.com</span>
                 </div>
               </div>
+              
+              <Button 
+                variant="ghost" 
+                className="justify-start px-4 py-3 h-auto text-destructive"
+                onClick={handleSignOut}
+              >
+                <LogOut className="h-5 w-5 mr-3" />
+                Sign out
+              </Button>
             </nav>
           </div>
         </div>
