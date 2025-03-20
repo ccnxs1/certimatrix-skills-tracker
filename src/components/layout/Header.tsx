@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Menu, X, Award, Users, BarChart, FileCheck, Bell, LogOut } from 'lucide-react';
@@ -12,6 +11,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
 import { useToast } from "@/hooks/use-toast";
+import { isUserAuthenticated, signOutUser } from '@/utils/authUtils';
 
 const Header = () => {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -22,9 +22,13 @@ const Header = () => {
 
   // Track authentication state
   const [isAuthenticated, setIsAuthenticated] = useState(() => {
-    // Check if user is authenticated by looking for a token in localStorage
-    return localStorage.getItem('auth_token') !== null;
+    return isUserAuthenticated();
   });
+
+  // Re-check authentication status when component mounts or route changes
+  useEffect(() => {
+    setIsAuthenticated(isUserAuthenticated());
+  }, [location.pathname]);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -53,15 +57,13 @@ const Header = () => {
   };
 
   const handleSignOut = () => {
-    console.log("Sign out clicked - starting sign out process");
+    console.log("Sign out clicked - executing complete sign out process");
     
-    // Force clear authentication data from localStorage
     try {
-      localStorage.removeItem('auth_token');
-      localStorage.removeItem('user_data');
-      console.log("LocalStorage items removed");
+      // Use the utility function to sign out
+      signOutUser();
       
-      // Update authentication state immediately
+      // Update the local state
       setIsAuthenticated(false);
       
       // Show success toast
@@ -70,12 +72,14 @@ const Header = () => {
         description: "You have been signed out of your account",
       });
       
-      // Force redirect to home page after sign out
-      console.log("Redirecting to home page");
-      setTimeout(() => {
-        navigate('/', { replace: true });
-        window.location.reload(); // Force reload to ensure state is reset
-      }, 100);
+      // Use a more reliable navigation approach
+      console.log("Redirecting to home page and reloading");
+      
+      // First navigate to root
+      navigate('/', { replace: true });
+      
+      // Then force a complete page reload to reset all React state
+      window.location.href = '/';
     } catch (error) {
       console.error("Error during sign out:", error);
       toast({
