@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Menu, X, Award, Users, BarChart, FileCheck, Bell, LogOut } from 'lucide-react';
@@ -52,21 +53,37 @@ const Header = () => {
   };
 
   const handleSignOut = () => {
-    // Clear authentication data from localStorage
-    localStorage.removeItem('auth_token');
-    localStorage.removeItem('user_data');
+    console.log("Sign out clicked - starting sign out process");
     
-    // Update authentication state
-    setIsAuthenticated(false);
-    
-    // Show success toast
-    toast({
-      title: "Signed out successfully",
-      description: "You have been signed out of your account",
-    });
-    
-    // Redirect to home page after sign out
-    navigate('/');
+    // Force clear authentication data from localStorage
+    try {
+      localStorage.removeItem('auth_token');
+      localStorage.removeItem('user_data');
+      console.log("LocalStorage items removed");
+      
+      // Update authentication state immediately
+      setIsAuthenticated(false);
+      
+      // Show success toast
+      toast({
+        title: "Signed out successfully",
+        description: "You have been signed out of your account",
+      });
+      
+      // Force redirect to home page after sign out
+      console.log("Redirecting to home page");
+      setTimeout(() => {
+        navigate('/', { replace: true });
+        window.location.reload(); // Force reload to ensure state is reset
+      }, 100);
+    } catch (error) {
+      console.error("Error during sign out:", error);
+      toast({
+        title: "Sign out failed",
+        description: "There was an error signing you out. Please try again.",
+        variant: "destructive"
+      });
+    }
   };
 
   return (
