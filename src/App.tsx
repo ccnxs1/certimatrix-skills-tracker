@@ -9,6 +9,7 @@ import Dashboard from "./pages/Dashboard";
 import Certificates from "./pages/Certificates";
 import Team from "./pages/Team";
 import NotFound from "./pages/NotFound";
+import Login from "./pages/Login";
 
 const queryClient = new QueryClient();
 
@@ -23,6 +24,7 @@ const App = () => (
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/certificates" element={<Certificates />} />
           <Route path="/team" element={<Team />} />
+          <Route path="/login" element={<Login />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

@@ -1,6 +1,7 @@
+
 import { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Menu, X, Award, Users, BarChart, FileCheck, Bell, LogOut } from 'lucide-react';
+import { Menu, X, Award, Users, BarChart, FileCheck, Bell, LogOut, LogIn } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { 
   DropdownMenu,
@@ -11,7 +12,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
 import { useToast } from "@/hooks/use-toast";
-import { isUserAuthenticated, signOutUser } from '@/utils/authUtils';
+import { isUserAuthenticated, signOutUser, signInUser, getUserData } from '@/utils/authUtils';
 
 const Header = () => {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -21,13 +22,30 @@ const Header = () => {
   const { toast } = useToast();
 
   // Track authentication state
-  const [isAuthenticated, setIsAuthenticated] = useState(() => {
-    return isUserAuthenticated();
-  });
+  const [isAuthenticated, setIsAuthenticated] = useState(isUserAuthenticated);
+  const [userData, setUserData] = useState(getUserData());
 
   // Re-check authentication status when component mounts or route changes
   useEffect(() => {
-    setIsAuthenticated(isUserAuthenticated());
+    const checkAuth = () => {
+      const authStatus = isUserAuthenticated();
+      setIsAuthenticated(authStatus);
+      setUserData(authStatus ? getUserData() : null);
+    };
+    
+    checkAuth();
+    
+    // Setup a listener for storage events to handle auth changes from other tabs
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'auth_token' || e.key === 'user_data') {
+        checkAuth();
+      }
+    };
+    
+    window.addEventListener('storage', handleStorageChange);
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+    };
   }, [location.pathname]);
 
   useEffect(() => {
@@ -65,6 +83,7 @@ const Header = () => {
       
       // Update the local state
       setIsAuthenticated(false);
+      setUserData(null);
       
       // Show success toast
       toast({
@@ -72,19 +91,43 @@ const Header = () => {
         description: "You have been signed out of your account",
       });
       
-      // Use a more reliable navigation approach
-      console.log("Redirecting to home page and reloading");
-      
-      // First navigate to root
+      // Navigate to home and force a page reload
       navigate('/', { replace: true });
-      
-      // Then force a complete page reload to reset all React state
-      window.location.href = '/';
+      window.location.reload();
     } catch (error) {
       console.error("Error during sign out:", error);
       toast({
         title: "Sign out failed",
         description: "There was an error signing you out. Please try again.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleSignIn = () => {
+    console.log("Sign in clicked - executing mock sign in");
+    
+    try {
+      // Use the utility function to sign in
+      signInUser();
+      
+      // Update the local state
+      setIsAuthenticated(true);
+      setUserData(getUserData());
+      
+      // Show success toast
+      toast({
+        title: "Signed in successfully",
+        description: "You have been signed in with a demo account",
+      });
+      
+      // Refresh the component state
+      navigate(location.pathname, { replace: true });
+    } catch (error) {
+      console.error("Error during sign in:", error);
+      toast({
+        title: "Sign in failed",
+        description: "There was an error signing you in. Please try again.",
         variant: "destructive"
       });
     }
@@ -129,34 +172,54 @@ const Header = () => {
 
           {/* Notification and User Menu (Desktop) */}
           <div className="hidden md:flex items-center space-x-2">
-            <Button variant="ghost" size="icon" className="relative">
-              <Bell className="h-5 w-5" />
-              <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-destructive animate-pulse" />
-            </Button>
-            
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="relative h-10 w-10 rounded-full overflow-hidden">
-                  <img 
-                    src="https://randomuser.me/api/portraits/men/1.jpg" 
-                    alt="User avatar" 
-                    className="h-full w-full object-cover"
-                  />
+            {isAuthenticated ? (
+              <>
+                <Button variant="ghost" size="icon" className="relative">
+                  <Bell className="h-5 w-5" />
+                  <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-destructive animate-pulse" />
                 </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48 animate-fade-in">
-                <DropdownMenuItem className="cursor-pointer">Profile</DropdownMenuItem>
-                <DropdownMenuItem className="cursor-pointer">Settings</DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem 
-                  className="cursor-pointer text-destructive flex items-center gap-2"
-                  onClick={handleSignOut}
-                >
-                  <LogOut className="h-4 w-4" />
-                  Sign out
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+                
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" className="relative h-10 w-10 rounded-full overflow-hidden">
+                      <img 
+                        src={userData?.avatar || "https://randomuser.me/api/portraits/men/1.jpg"} 
+                        alt="User avatar" 
+                        className="h-full w-full object-cover"
+                      />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-48 animate-fade-in">
+                    <div className="px-2 py-1.5 text-sm font-medium">
+                      {userData?.name || "User"}
+                    </div>
+                    <div className="px-2 py-1 text-xs text-muted-foreground mb-1">
+                      {userData?.email || "user@example.com"}
+                    </div>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem className="cursor-pointer">Profile</DropdownMenuItem>
+                    <DropdownMenuItem className="cursor-pointer">Settings</DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem 
+                      className="cursor-pointer text-destructive flex items-center gap-2"
+                      onClick={handleSignOut}
+                    >
+                      <LogOut className="h-4 w-4" />
+                      Sign out
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </>
+            ) : (
+              <Button 
+                variant="default"
+                className="flex items-center gap-2"
+                onClick={handleSignIn}
+              >
+                <LogIn className="h-4 w-4" />
+                Sign in (Demo)
+              </Button>
+            )}
           </div>
 
           {/* Mobile Menu Button */}
@@ -198,33 +261,46 @@ const Header = () => {
               
               <div className="h-px w-full bg-border my-2" />
 
-              <Button variant="ghost" className="justify-start px-4 py-3 h-auto">
-                <Bell className="h-5 w-5 mr-3" />
-                Notifications
-              </Button>
+              {isAuthenticated ? (
+                <>
+                  <Button variant="ghost" className="justify-start px-4 py-3 h-auto">
+                    <Bell className="h-5 w-5 mr-3" />
+                    Notifications
+                  </Button>
 
-              <div className="flex items-center space-x-3 px-4 py-3">
-                <div className="h-10 w-10 rounded-full overflow-hidden">
-                  <img 
-                    src="https://randomuser.me/api/portraits/men/1.jpg" 
-                    alt="User avatar" 
-                    className="h-full w-full object-cover"
-                  />
-                </div>
-                <div className="flex flex-col">
-                  <span className="text-sm font-medium">Alex Morgan</span>
-                  <span className="text-xs text-muted-foreground">alex.morgan@example.com</span>
-                </div>
-              </div>
-              
-              <Button 
-                variant="ghost" 
-                className="justify-start px-4 py-3 h-auto text-destructive"
-                onClick={handleSignOut}
-              >
-                <LogOut className="h-5 w-5 mr-3" />
-                Sign out
-              </Button>
+                  <div className="flex items-center space-x-3 px-4 py-3">
+                    <div className="h-10 w-10 rounded-full overflow-hidden">
+                      <img 
+                        src={userData?.avatar || "https://randomuser.me/api/portraits/men/1.jpg"} 
+                        alt="User avatar" 
+                        className="h-full w-full object-cover"
+                      />
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="text-sm font-medium">{userData?.name || "User"}</span>
+                      <span className="text-xs text-muted-foreground">{userData?.email || "user@example.com"}</span>
+                    </div>
+                  </div>
+                  
+                  <Button 
+                    variant="ghost" 
+                    className="justify-start px-4 py-3 h-auto text-destructive"
+                    onClick={handleSignOut}
+                  >
+                    <LogOut className="h-5 w-5 mr-3" />
+                    Sign out
+                  </Button>
+                </>
+              ) : (
+                <Button 
+                  variant="default" 
+                  className="justify-start px-4 py-3 h-auto"
+                  onClick={handleSignIn}
+                >
+                  <LogIn className="h-5 w-5 mr-3" />
+                  Sign in (Demo)
+                </Button>
+              )}
             </nav>
           </div>
         </div>
