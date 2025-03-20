@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Menu, X, Award, Users, BarChart, FileCheck, Bell, LogOut, LogIn } from 'lucide-react';
@@ -22,10 +21,10 @@ const Header = () => {
   const { toast } = useToast();
 
   // Track authentication state
-  const [isAuthenticated, setIsAuthenticated] = useState(isUserAuthenticated);
-  const [userData, setUserData] = useState(getUserData());
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  const [userData, setUserData] = useState<any>(null);
 
-  // Re-check authentication status when component mounts or route changes
+  // Check authentication status every time the component renders
   useEffect(() => {
     const checkAuth = () => {
       const authStatus = isUserAuthenticated();
@@ -35,16 +34,19 @@ const Header = () => {
     
     checkAuth();
     
-    // Setup a listener for storage events to handle auth changes from other tabs
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === 'auth_token' || e.key === 'user_data') {
-        checkAuth();
-      }
+    // Add event listener for storage changes
+    const handleStorageChange = () => {
+      checkAuth();
     };
     
     window.addEventListener('storage', handleStorageChange);
+    
+    // Check auth status when the location changes
+    const interval = setInterval(checkAuth, 1000);
+    
     return () => {
       window.removeEventListener('storage', handleStorageChange);
+      clearInterval(interval);
     };
   }, [location.pathname]);
 
@@ -74,37 +76,19 @@ const Header = () => {
     return location.pathname === path;
   };
 
-  const handleSignOut = () => {
+  const handleSignOut = (e: React.MouseEvent) => {
+    e.preventDefault();
     console.log("Sign out clicked - executing complete sign out process");
     
-    try {
-      // Use the utility function to sign out
-      signOutUser();
-      
-      // Update the local state
-      setIsAuthenticated(false);
-      setUserData(null);
-      
-      // Show success toast
-      toast({
-        title: "Signed out successfully",
-        description: "You have been signed out of your account",
-      });
-      
-      // Navigate to home and force a page reload
-      navigate('/', { replace: true });
-      window.location.reload();
-    } catch (error) {
-      console.error("Error during sign out:", error);
-      toast({
-        title: "Sign out failed",
-        description: "There was an error signing you out. Please try again.",
-        variant: "destructive"
-      });
-    }
+    // Use the utility function to sign out
+    signOutUser();
+    
+    // We don't need to manually update state or navigate here since
+    // the page reload in signOutUser will handle this
   };
 
-  const handleSignIn = () => {
+  const handleSignIn = (e: React.MouseEvent) => {
+    e.preventDefault();
     console.log("Sign in clicked - executing mock sign in");
     
     try {
@@ -121,8 +105,8 @@ const Header = () => {
         description: "You have been signed in with a demo account",
       });
       
-      // Refresh the component state
-      navigate(location.pathname, { replace: true });
+      // Navigate to dashboard
+      navigate('/dashboard');
     } catch (error) {
       console.error("Error during sign in:", error);
       toast({

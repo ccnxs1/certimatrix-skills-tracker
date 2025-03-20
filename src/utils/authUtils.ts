@@ -26,6 +26,7 @@ initAuth();
 
 // Check if user is authenticated
 export const isUserAuthenticated = (): boolean => {
+  // We need to explicitly check for the auth token's existence
   return localStorage.getItem('auth_token') !== null;
 };
 
@@ -37,6 +38,8 @@ export const getUserData = () => {
 
 // Sign out user completely
 export const signOutUser = (): void => {
+  console.log("Starting complete sign out process");
+  
   // Clear all authentication-related items from localStorage
   localStorage.removeItem('auth_token');
   localStorage.removeItem('user_data');
@@ -45,23 +48,23 @@ export const signOutUser = (): void => {
   localStorage.removeItem('auth_state');
   localStorage.removeItem('user_session');
   
-  // Force reset the init flag to ensure clean slate
+  // Force reset the initialization flag
   localStorage.removeItem('auth_initialized');
   
-  // Reinstantiate the auth state (this is critical)
-  setTimeout(() => {
-    initAuth();
-    
-    // Force a complete page refresh to ensure all components re-render
-    window.location.href = window.location.origin;
-  }, 100);
+  // Also clear session storage to be thorough
+  sessionStorage.clear();
   
   console.log("Auth state cleared from storage");
+
+  // Force a complete page reload to ensure all components re-render
+  // This is crucial for resetting React state across the application
+  window.location.reload();
 };
 
 // Mock sign in function (for demonstration)
 export const signInUser = (): void => {
   localStorage.setItem('auth_token', 'mock-jwt-token');
   localStorage.setItem('user_data', JSON.stringify(MOCK_USER));
+  localStorage.setItem('auth_initialized', 'true');
   console.log("User signed in with mock data");
 };
