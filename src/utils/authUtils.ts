@@ -44,10 +44,17 @@ export const signOutUser = (): void => {
   // Clear any other auth-related items that might exist
   localStorage.removeItem('auth_state');
   localStorage.removeItem('user_session');
+  
+  // Force reset the init flag to ensure clean slate
   localStorage.removeItem('auth_initialized');
   
-  // Force clear session storage as well
-  sessionStorage.clear();
+  // Reinstantiate the auth state (this is critical)
+  setTimeout(() => {
+    initAuth();
+    
+    // Force a complete page refresh to ensure all components re-render
+    window.location.href = window.location.origin;
+  }, 100);
   
   console.log("Auth state cleared from storage");
 };
